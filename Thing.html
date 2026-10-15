@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RNGdle Clone</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121213;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            background-color: #1a1a1c;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            max-width: 450px;
+            width: 90%;
+        }
+
+        h1 {
+            margin-top: 0;
+            letter-spacing: 2px;
+            font-size: 2.5rem;
+        }
+
+        .sub-text {
+            color: #818384;
+            margin-bottom: 25px;
+        }
+
+        .roll-box {
+            font-size: 3.5rem;
+            font-weight: bold;
+            font-family: monospace;
+            background-color: #272729;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button {
+            background-color: #538d4e;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            background-color: #43723f;
+        }
+
+        button:disabled {
+            background-color: #3a3a3c;
+            color: #818384;
+            cursor: not-allowed;
+        }
+
+        .rarity {
+            font-weight: bold;
+            font-size: 1.2rem;
+            padding: 6px 12px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        .common { background-color: #3a3a3c; color: #ffffff; }
+        .rare { background-color: #2a4d7c; color: #5c93e2; }
+        .epic { background-color: #5b2a7c; color: #b25ce2; }
+        .legendary { background-color: #7c642a; color: #e2b85c; }
+
+        .badges-title {
+            text-align: left;
+            font-size: 0.9rem;
+            color: #818384;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: none;
+        }
+
+        .badges-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .badge {
+            background-color: #2f2f31;
+            border: 1px solid #3a3a3c;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #copyBtn {
+            background-color: #3a3a3c;
+        }
+        #copyBtn:hover {
+            background-color: #4a4a4c;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>RNGdle 🎲</h1>
+        <p class="sub-text">One roll a day. What will yours be?</p>
+        
+        <div class="roll-box" id="rollDisplay">------</div>
+        
+        <div id="rarityDisplay" class="rarity hidden">Common</div>
+
+        <div class="badges-title" id="badgesTitle">Earned Badges</div>
+        <div class="badges-container" id="badgesContainer"></div>
+
+        <button id="rollBtn" onclick="playRNGdle()">GENERATE ROLL</button>
+        <button id="copyBtn" class="hidden" onclick="copyResults()">📋 COPY RESULTS</button>
+    </div>
+
+    <script>
+        // Check if user already rolled today
+        const todayStr = new Date().toISOString().slice(0, 10);
+        
+        window.onload = function() {
+            if (localStorage.getItem('lastRolledDate') === todayStr) {
+                const savedNum = localStorage.getItem('savedRoll');
+                displayResults(savedNum);
+                document.getElementById('rollBtn').disabled = true;
+                document.getElementById('rollBtn').innerText = "ROLLED FOR TODAY";
+            }
+        }
+
+        function playRNGdle() {
+            // Generate a random number between 0 and 1,000,000
+            const rolledNumber = Math.floor(Math.random() * 1000001);
+            
+            // Save state to simulate one-roll-per-day rule
+            localStorage.setItem('lastRolledDate', todayStr);
+            localStorage.setItem('savedRoll', rolledNumber);
+
+            displayResults(rolledNumber);
+        }
+
+        function displayResults(num) {
+            const numStr = String(num);
+            document.getElementById('rollDisplay').innerText = numStr.padStart(6, '0');
+            document.getElementById('rollBtn').disabled = true;
+            document.getElementById('rollBtn').innerText = "ROLLED FOR TODAY";
+
+            // Process and collect badges
+            const badges = checkBadges(numStr);
+            
+            // Determine rarity tier based on badge quantity / luck
+            let rarity = 'common';
+            if (badges.length >= 4 || numStr.includes('777')) rarity = 'legendary';
+            else if (badges.length === 3) rarity = 'epic';
+            else if (badges.length >= 1) rarity = 'rare';
+
+            // Render Rarity
+            const rDiv = document.getElementById('rarityDisplay');
+            rDiv.className = `rarity ${rarity}`;
+            rDiv.innerText = rarity;
+            rDiv.classList.remove('hidden');
+
+            // Render Badges
+            const container = document.getElementById('badgesContainer');
+            container.innerHTML = '';
+            if(badges.length > 0) {
+                document.getElementById('badgesTitle').style.display = 'block';
+                badges.forEach(b => {
+                    const span = document.createElement('span');
+                    span.className = 'badge';
+                    span.innerHTML = `${b.emoji} ${b.name}`;
+                    container.appendChild(span);
+                });
+            }
+
+            // Reveal Copy Button
+            document.getElementById('copyBtn').classList.remove('hidden');
+        }
+
+        function checkBadges(str) {
+            const badges = [];
+            
+            // 1. Check Palindrome
+            if (str === str.split('').reverse().join('') && str.length > 1) {
+                badges.push({name: 'Palindrome', emoji: '🪞'});
+            }
+            
+            // 2. Check Repeating Digits
+            const counts = {};
+            for (const char of str) { counts[char] = (counts[char] || 0) + 1; }
+            const maxRepeat = Math.max(...Object.values(counts));
+            
+            if (maxRepeat >= 3) badges.push({name: `Multidigit (${maxRepeat}x)`, emoji: '👯'});
+            
+            // 3. Cultural Meme references
+            if (str.includes('420')) badges.push({name: 'Herbologist', emoji: '🌿'});
+            if (str.includes('69')) badges.push({name: 'Nice.', emoji: '😏'});
+            if (str.includes('777')) badges.push({name: 'Jackpot', emoji: '🎰'});
+            
+            // 4. Math Properties
+            const num = parseInt(str);
+            if (num % 2 === 0) badges.push({name: 'Even', emoji: '⚖️'});
+            if (num === 0 || num === 1000000) badges.push({name: 'The Void Boundary', emoji: '🌌'});
+
+            return badges;
+        }
+
+        function copyResults() {
+            const num = document.getElementById('rollDisplay').innerText;
+            const rarity = document.getElementById('rarityDisplay').innerText.toUpperCase();
+            const badgeSpans = document.querySelectorAll('.badge');
+            let badgeText = '';
+            
+            badgeSpans.forEach(span => {
+                badgeText += `\n${span.innerText}`;
+            });
+
+            const copyString = `RNGdle Clone 🎲\nRoll: ${num}\nRarity: ${rarity}${badgeText}\n\nPlay your daily roll!`;
+            
+            navigator.clipboard.writeText(copyString).then(() => {
+                alert('Results copied to clipboard!');
+            });
+        }
+    </script>
+</body>
+</html>
