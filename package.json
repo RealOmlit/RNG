@@ -1,0 +1,8 @@
+{
+  "name": "rngdle",
+  "version": "3.0.0",
+  "private": true,
+  "description": "A daily game of absolutely no skill.",
+  "scripts": { "start": "node server.cjs", "dev": "node server.cjs", "test": "node tests/game.test.cjs" },
+  "engines": { "node": ">=22.13.0" }
+}

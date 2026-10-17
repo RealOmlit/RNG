@@ -1,260 +1,28 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RNGdle Clone</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121213;
-            color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-
-        .container {
-            text-align: center;
-            background-color: #1a1a1c;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-            max-width: 450px;
-            width: 90%;
-        }
-
-        h1 {
-            margin-top: 0;
-            letter-spacing: 2px;
-            font-size: 2.5rem;
-        }
-
-        .sub-text {
-            color: #818384;
-            margin-bottom: 25px;
-        }
-
-        .roll-box {
-            font-size: 3.5rem;
-            font-weight: bold;
-            font-family: monospace;
-            background-color: #272729;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            letter-spacing: 4px;
-            min-height: 70px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        button {
-            background-color: #538d4e;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            width: 100%;
-            margin-bottom: 10px;
-        }
-
-        button:hover {
-            background-color: #43723f;
-        }
-
-        button:disabled {
-            background-color: #3a3a3c;
-            color: #818384;
-            cursor: not-allowed;
-        }
-
-        .rarity {
-            font-weight: bold;
-            font-size: 1.2rem;
-            padding: 6px 12px;
-            border-radius: 4px;
-            display: inline-block;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-        }
-
-        .common { background-color: #3a3a3c; color: #ffffff; }
-        .rare { background-color: #2a4d7c; color: #5c93e2; }
-        .epic { background-color: #5b2a7c; color: #b25ce2; }
-        .legendary { background-color: #7c642a; color: #e2b85c; }
-
-        .badges-title {
-            text-align: left;
-            font-size: 0.9rem;
-            color: #818384;
-            text-transform: uppercase;
-            margin-bottom: 8px;
-            display: none;
-        }
-
-        .badges-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .badge {
-            background-color: #2f2f31;
-            border: 1px solid #3a3a3c;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .hidden {
-            display: none !important;
-        }
-
-        #copyBtn {
-            background-color: #3a3a3c;
-        }
-        #copyBtn:hover {
-            background-color: #4a4a4c;
-        }
-    </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#171819"><meta name="description" content="One daily number. Absolutely no skill. Roll, earn Entropy Points, collect improbable badges, and blame the RNG gods."><title>RNGdle — Absolutely no skill required.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <div class="container">
-        <h1>RNGdle 🎲</h1>
-        <p class="sub-text">One roll a day. What will yours be?</p>
-        
-        <div class="roll-box" id="rollDisplay">------</div>
-        
-        <div id="rarityDisplay" class="rarity hidden">Common</div>
-
-        <div class="badges-title" id="badgesTitle">Earned Badges</div>
-        <div class="badges-container" id="badgesContainer"></div>
-
-        <button id="rollBtn" onclick="playRNGdle()">GENERATE ROLL</button>
-        <button id="copyBtn" class="hidden" onclick="copyResults()">📋 COPY RESULTS</button>
-    </div>
-
-    <script>
-        // Check if user already rolled today
-        const todayStr = new Date().toISOString().slice(0, 10);
-        
-        window.onload = function() {
-            if (localStorage.getItem('lastRolledDate') === todayStr) {
-                const savedNum = localStorage.getItem('savedRoll');
-                displayResults(savedNum);
-                document.getElementById('rollBtn').disabled = true;
-                document.getElementById('rollBtn').innerText = "ROLLED FOR TODAY";
-            }
-        }
-
-        function playRNGdle() {
-            // Generate a random number between 0 and 1,000,000
-            const rolledNumber = Math.floor(Math.random() * 1000001);
-            
-            // Save state to simulate one-roll-per-day rule
-            localStorage.setItem('lastRolledDate', todayStr);
-            localStorage.setItem('savedRoll', rolledNumber);
-
-            displayResults(rolledNumber);
-        }
-
-        function displayResults(num) {
-            const numStr = String(num);
-            document.getElementById('rollDisplay').innerText = numStr.padStart(6, '0');
-            document.getElementById('rollBtn').disabled = true;
-            document.getElementById('rollBtn').innerText = "ROLLED FOR TODAY";
-
-            // Process and collect badges
-            const badges = checkBadges(numStr);
-            
-            // Determine rarity tier based on badge quantity / luck
-            let rarity = 'common';
-            if (badges.length >= 4 || numStr.includes('777')) rarity = 'legendary';
-            else if (badges.length === 3) rarity = 'epic';
-            else if (badges.length >= 1) rarity = 'rare';
-
-            // Render Rarity
-            const rDiv = document.getElementById('rarityDisplay');
-            rDiv.className = `rarity ${rarity}`;
-            rDiv.innerText = rarity;
-            rDiv.classList.remove('hidden');
-
-            // Render Badges
-            const container = document.getElementById('badgesContainer');
-            container.innerHTML = '';
-            if(badges.length > 0) {
-                document.getElementById('badgesTitle').style.display = 'block';
-                badges.forEach(b => {
-                    const span = document.createElement('span');
-                    span.className = 'badge';
-                    span.innerHTML = `${b.emoji} ${b.name}`;
-                    container.appendChild(span);
-                });
-            }
-
-            // Reveal Copy Button
-            document.getElementById('copyBtn').classList.remove('hidden');
-        }
-
-        function checkBadges(str) {
-            const badges = [];
-            
-            // 1. Check Palindrome
-            if (str === str.split('').reverse().join('') && str.length > 1) {
-                badges.push({name: 'Palindrome', emoji: '🪞'});
-            }
-            
-            // 2. Check Repeating Digits
-            const counts = {};
-            for (const char of str) { counts[char] = (counts[char] || 0) + 1; }
-            const maxRepeat = Math.max(...Object.values(counts));
-            
-            if (maxRepeat >= 3) badges.push({name: `Multidigit (${maxRepeat}x)`, emoji: '👯'});
-            
-            // 3. Cultural Meme references
-            if (str.includes('420')) badges.push({name: 'Herbologist', emoji: '🌿'});
-            if (str.includes('69')) badges.push({name: 'Nice.', emoji: '😏'});
-            if (str.includes('777')) badges.push({name: 'Jackpot', emoji: '🎰'});
-            
-            // 4. Math Properties
-            const num = parseInt(str);
-            if (num % 2 === 0) badges.push({name: 'Even', emoji: '⚖️'});
-            if (num === 0 || num === 1000000) badges.push({name: 'The Void Boundary', emoji: '🌌'});
-
-            return badges;
-        }
-
-        function copyResults() {
-            const num = document.getElementById('rollDisplay').innerText;
-            const rarity = document.getElementById('rarityDisplay').innerText.toUpperCase();
-            const badgeSpans = document.querySelectorAll('.badge');
-            let badgeText = '';
-            
-            badgeSpans.forEach(span => {
-                badgeText += `\n${span.innerText}`;
-            });
-
-            const copyString = `RNGdle Clone 🎲\nRoll: ${num}\nRarity: ${rarity}${badgeText}\n\nPlay your daily roll!`;
-            
-            navigator.clipboard.writeText(copyString).then(() => {
-                alert('Results copied to clipboard!');
-            });
-        }
-    </script>
-</body>
-</html>
+<header class="site-header"><a class="logo" href="./"><span class="logo-die" aria-hidden="true">⚄</span>RNG<span>dle</span></a><nav aria-label="Main navigation"><button class="nav-link active" data-view="play">Daily</button><button class="nav-link" data-view="collection">Badges <span id="collection-count">0</span></button><button class="nav-link" data-view="leaderboard">Leaderboard</button></nav><button class="help-button" id="help-button" aria-label="How to play">?</button></header>
+<main>
+<div class="page-intro"><div class="day-label" id="edition">DAILY DOSE OF RANDOMNESS</div><h1>A daily game of<br>absolutely <span>no skill.</span></h1><p>One number. No strategy. Try not to take it personally.</p></div>
+<div id="play-view">
+<div class="layout"><div class="game-column"><section class="roll-card" id="roll-card" aria-label="Your number generator"><div class="card-heading"><h2 id="draw-heading">Your daily roll</h2><span class="subtle-tag" id="availability">1 roll available</span></div>
+<div class="machine" id="machine"><div class="reels" id="reels" aria-label="Your number"><span>?</span><span>?</span><span>?</span><span>?</span><span>?</span><span>?</span></div><p class="machine-status" id="machine-status" aria-live="polite">The RNG gods are waiting.</p><div class="reveal-track"><i id="reveal-fill"></i></div></div>
+<div class="result-summary hidden" id="result-summary" aria-live="polite"><div><span class="small-label">ENTROPY POINTS</span><strong><span id="result-ep">0</span><small>EP</small></strong></div><div class="rarity-result"><span class="small-label">YOUR RARITY</span><strong id="result-rarity">Common</strong><span id="rarity-comment"></span></div></div>
+<div class="result-badges hidden" id="result-badges"><div class="badge-list-label"><span>What did you get?</span><span id="badge-hit-count"></span></div><div id="earned-badges"></div></div>
+<button class="roll-button" id="roll-button">Roll my daily number <span>↗</span></button><button class="share-button hidden" id="share-button">Copy result ↗</button><p class="roll-note" id="roll-note">Locked in instantly. The suspense is just for your benefit.</p><div class="next-roll"><span id="next-roll-label">One main roll every 24 hours</span><span id="countdown">Ready when you are</span></div></section>
+<section class="bonus-card"><div><span class="ticket-icon" aria-hidden="true">⊞</span><div><h2>Quest rolls <span id="bonus-balance">0</span></h2><p>Extra luck. Same questionable odds.</p></div></div><button id="bonus-button" disabled>Use a quest roll ↗</button><p>Your main daily result stays locked. Quest rolls don’t enter the leaderboard. Unused rolls expire at 00:00 UTC.</p><button class="return-daily hidden" id="return-daily">← Back to my daily result</button></section>
+<section class="history-section"><div class="section-heading"><h2>Your recent luck</h2><span id="total-ep">0 EP lifetime</span></div><div id="history"><p class="empty">Nothing to blame on probability. Yet.</p></div></section></div>
+<aside><section class="quests-card" id="quests-card"><div class="section-heading"><h2>Daily quests</h2><span class="subtle-tag">+4 rolls</span></div><p class="section-description">Complete a quest. Claim another roll.</p><div id="quests"></div><div class="quest-reset">New quests in <span id="quest-countdown">00:00:00</span></div></section><section class="daily-stats"><div><span class="small-label">DAILY STREAK</span><strong><span id="streak-number">0</span> <small>days</small></strong></div><div><span class="small-label">TODAY’S RANK</span><strong id="your-rank">—</strong></div></section><section class="rarity-card"><div class="section-heading"><h2>The luck spectrum</h2><span class="small-label">EP / ROLL</span></div><div id="rarity-ladder"></div><p>Badge EP adds up to your rarity. Every roll has identical odds.</p></section><p class="satire-note">“Finally, a game I can lose<br>without being bad at it.”<span>— probably you, tomorrow</span></p></aside></div></div>
+<section id="collection-view" class="alternate-view hidden"><div class="section-heading"><h2>The badge cabinet</h2><span class="subtle-tag" id="collection-progress">0 / 32 found</span></div><p class="view-description">Math, weird coincidences, and internet brain rot. Badge EP scales with how rarely it occurs. Matches stack.</p><div class="filters" id="badge-filters"><button class="active" data-filter="all">All badges</button><button data-filter="found">Discovered</button><button data-filter="missing">Still waiting</button></div><div class="collection-grid" id="collection-grid"></div></section>
+<section id="leaderboard-view" class="alternate-view hidden"><div class="section-heading"><h2>Today’s lucky people</h2><span class="subtle-tag" id="leaderboard-date"></span></div><p class="view-description">Main daily rolls only. No quest rolls, no multipliers. Equal odds, wildly unequal outcomes. Ties go to the earlier roll.</p><div class="leaderboard-toolbar"><button id="name-button">Set your name ↗</button><span id="leaderboard-players"></span><button id="refresh-board">Refresh ↻</button></div><div id="leaderboard"></div><p class="leaderboard-note" id="leaderboard-note"></p></section>
+<footer><span>RNGdle <span class="footer-dot">·</span> Made entirely of chance.</span><div><button id="sound-button" aria-pressed="false">Sound off</button><button id="motion-button" aria-pressed="false">Less suspense</button><span id="connection-status">Connecting…</span></div></footer>
+</main>
+<dialog id="help-dialog"><button class="close-dialog" aria-label="Close rules">×</button><span class="small-label">THE ENTIRE TUTORIAL</span><h2>Press a button.<br>That’s the game.</h2><p>Your main roll picks a random integer from <b>0 to 1,000,000</b>, inclusive. Most results display as six digits; 1,000,000 gets a seventh. It locks instantly, then the animation slowly tells you what you got.</p><ol><li><b>One main roll every 24 hours.</b> No rerolls. No changing your number. This is your ranked result.</li><li><b>Earn Entropy Points.</b> Prime numbers, palindromes, Harshad numbers, sequences, and meme numbers unlock badges. Rarer badges give more EP.</li><li><b>Let the score judge you.</b> Your total EP determines your rarity, from Trash to Anomaly.</li><li><b>Quests earn separate bonus rolls.</b> Claim each reward once a UTC day. Bonus rolls never replace your main roll or enter the daily leaderboard, and expire at midnight UTC.</li></ol><p id="leaderboard-help">The leaderboard is shared by everyone playing on this server. No skill, money, or “luck boosts” involved.</p><button class="roll-button" id="accept-rules">I admit this takes no skill <span>✓</span></button></dialog>
+<dialog id="name-dialog"><button class="close-dialog" aria-label="Close name form">×</button><h2>What should we call you?</h2><p>A name to attach to your statistically undeserved success.</p><form id="name-form"><label for="player-name">Leaderboard name</label><input id="player-name" name="name" minlength="2" maxlength="20" pattern="[a-zA-Z0-9 _-]{2,20}" autocomplete="nickname" required><p class="input-note">2–20 letters, numbers, spaces, dashes, or underscores.</p><button class="roll-button" type="submit">Save name <span>↗</span></button></form></dialog>
+<div class="toast" id="toast" role="status"></div>
+<script src="engine.js"></script><script src="app.js"></script>
+</body></html>
