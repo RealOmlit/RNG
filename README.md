@@ -35,13 +35,13 @@ Four quests each grant **one separate bonus roll**, claimable once per UTC day:
 
 Normal bonus rolls have identical odds and EP rules. They never overwrite a main roll, reset its cooldown, or enter the ranked leaderboard. Unspent bonus rolls expire at 00:00 UTC. Reading and copying are convenience quests; those actions are client-reported, while reward eligibility, single claims, balances, and spending are enforced by the server.
 
-## Secret code: Infinity mode
+## Admin panel and Infinity mode
 
-Click **Got a code?** in the footer and enter **123456**. This unlocks **Infinity mode**: unlimited extra rolls with guaranteed **Anomaly** rarity. The main roll button becomes **Roll with infinite luck**, and an Infinity banner, themed reels, and a top-tier celebration mark the mode. Skip and reduced-motion controls still work.
+Press **↑ ↑ ↓ ↓** (Up, Up, Down, Down) on your keyboard to open the hidden **Admin panel**, then enter **123456**. The shortcut works across the game views, outside text fields and dialogs; holding an arrow does not count as repeated presses. This unlocks **Infinity mode**: unlimited extra rolls with guaranteed **Anomaly** rarity. The main roll button becomes **Roll with infinite luck**, and an Infinity banner, themed reels, and a top-tier celebration mark the mode. Skip and reduced-motion controls still work.
 
 Infinity draws pick from the six numbers that reach Anomaly under the current scoring rules: 0, 1, 2, 5, 6, and 999999. Every matching badge and its actual EP are saved. Infinity rolls are marked as boosted in history and sharing, stay outside the leaderboard, and preserve your main daily result, cooldown, and earned quest-roll balance. Ranked daily rolls always use the normal uniform number generator.
 
-Use **Return to normal play** to pause. The unlock persists; click **∞ Infinity mode** in the footer to enable it again without re-entering the code. Unlocks, enabled/paused state, and boosted results survive reloads in both local-browser and server-backed play. Active Infinity mode restores your most recent boosted result on reload. Incorrect codes show an inline error and grant nothing.
+Use **Return to normal play** to pause. The unlock persists; press **↑ ↑ ↓ ↓** to reopen the admin panel and enable it again without re-entering the code. Unlocks, enabled/paused state, and boosted results survive reloads in both local-browser and server-backed play. Active Infinity mode restores your most recent boosted result on reload. Incorrect codes show an inline error and grant nothing.
 
 ## Leaderboard and saves
 
@@ -57,7 +57,7 @@ Existing local and server rolls automatically gain the expanded badge matches an
 npm test
 ```
 
-Thirty-three checks cover exhaustive frequencies for all 100 badges over all 1,000,001 outcomes, EP consistency and attainable tiers, known mathematical examples and exact modular arithmetic, digit patterns and the seven-digit boundary, the full 24-hour lock, all quests and claim rules, UTC expiry, leaderboard exclusion and ordering, server-generated scoring, private sessions, SQLite durability and score migration, frontend/API integration, progressive digit and badge reveals, skipping, reduced motion, cabinet controls, local save upgrades, full-storage recovery, lost bonus responses, mutation locking, honest static fallback, secret-code validation, unlimited Anomaly rolls, preserved quest balances and daily ranking, private unlocks, schema upgrades, secret persistence, and enabling/pausing Infinity in the frontend. The frontend checks use a DOM harness; visual browser testing is separate.
+Checks cover exhaustive frequencies for all 100 badges over all 1,000,001 outcomes, EP consistency and attainable tiers, known mathematical examples and exact modular arithmetic, digit patterns and the seven-digit boundary, the full 24-hour lock, all quests and claim rules, UTC expiry, leaderboard exclusion and ordering, server-generated scoring, private sessions, SQLite durability and score migration, frontend/API integration, progressive digit and badge reveals, skipping, reduced motion, cabinet controls, local save upgrades, full-storage recovery, lost bonus responses, mutation locking, honest static fallback, the admin keyboard shortcut, secret-code validation, unlimited Anomaly rolls, preserved quest balances and daily ranking, private unlocks, schema upgrades, secret persistence, and enabling/pausing Infinity in the frontend. The frontend checks use a DOM harness; visual browser testing is separate.
 
 To deliberately recalibrate badge frequencies after changing matching rules:
 
