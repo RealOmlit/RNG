@@ -10,10 +10,20 @@ function createStore(filename=':memory:',options={}){
  CREATE INDEX IF NOT EXISTS rolls_player ON rolls(player,at);
  CREATE INDEX IF NOT EXISTS rolls_board ON rolls(mode,at,ep);
  CREATE TABLE IF NOT EXISTS claims(player TEXT NOT NULL REFERENCES players(id),date TEXT NOT NULL,quest TEXT NOT NULL,PRIMARY KEY(player,date,quest));
- CREATE TABLE IF NOT EXISTS actions(player TEXT NOT NULL REFERENCES players(id),date TEXT NOT NULL,action TEXT NOT NULL,PRIMARY KEY(player,date,action));`);
+ CREATE TABLE IF NOT EXISTS actions(player TEXT NOT NULL REFERENCES players(id),date TEXT NOT NULL,action TEXT NOT NULL,PRIMARY KEY(player,date,action));
+ CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS secrets(player TEXT PRIMARY KEY REFERENCES players(id),enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0,1)));`);
+ if(!db.prepare('PRAGMA table_info(rolls)').all().some(c=>c.name==='boosted'))db.exec('ALTER TABLE rolls ADD COLUMN boosted INTEGER NOT NULL DEFAULT 0 CHECK(boosted IN (0,1))');
+ // Re-score existing rolls once per rules change, so history and ranking agree.
+ const scoringVersion=JSON.stringify(E.FREQUENCIES);
+ if(db.prepare("SELECT value FROM metadata WHERE key='scoring'").get()?.value!==scoringVersion){
+  db.exec('BEGIN IMMEDIATE');
+  try{const update=db.prepare('UPDATE rolls SET ep=? WHERE id=?');for(const roll of db.prepare('SELECT id,number FROM rolls').all())update.run(E.classify(roll.number).ep,roll.id);db.prepare("INSERT OR REPLACE INTO metadata VALUES('scoring',?)").run(scoringVersion);db.exec('COMMIT');}catch(error){db.exec('ROLLBACK');db.close();throw error;}
+ }
  const fail=(status,message)=>{const error=new Error(message);error.status=status;throw error;};
  function player(id){const existing=typeof id==='string'&&db.prepare('SELECT * FROM players WHERE id=?').get(id);if(existing)return existing;const p={id:randomBytes(32).toString('hex'),name:'Unlucky-'+randomBytes(2).toString('hex').toUpperCase()};db.prepare('INSERT INTO players VALUES(?,?)').run(p.id,p.name);return p;}
- function records(id){return db.prepare('SELECT id,number,mode,at,ep FROM rolls WHERE player=? ORDER BY at,id').all(id);}
+ function records(id){return db.prepare('SELECT id,number,mode,at,ep,boosted FROM rolls WHERE player=? ORDER BY at,id').all(id);}
+ function secretState(id){const row=db.prepare('SELECT enabled FROM secrets WHERE player=?').get(id);return {unlocked:!!row,enabled:!!row?.enabled};}
  function claimRows(id){return db.prepare('SELECT date,quest AS id FROM claims WHERE player=?').all(id);}
  function actionRows(id,date){return db.prepare('SELECT action FROM actions WHERE player=? AND date=?').all(id,date).map(r=>r.action);}
  function transaction(fn){db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(error){db.exec('ROLLBACK');throw error;}}
@@ -25,16 +35,16 @@ function createStore(filename=':memory:',options={}){
   const players=Number(db.prepare("SELECT COUNT(*) AS n FROM rolls WHERE mode='daily' AND at>=? AND at<?").get(start,end).n);
   const own=db.prepare("SELECT ep,at,id FROM rolls WHERE player=? AND mode='daily' AND at>=? AND at<? ORDER BY at DESC LIMIT 1").get(id,start,end);
   const rank=own?Number(db.prepare("SELECT COUNT(*)+1 AS n FROM rolls WHERE mode='daily' AND at>=? AND at<? AND (ep>? OR (ep=? AND (at<? OR (at=? AND id<?))))").get(start,end,own.ep,own.ep,own.at,own.at,own.id).n):null;
-  return {source:'server',name:p.name,draws,claims,actions,now,nextDailyAt:last?last.at+E.DAY:0,bonus:E.bonusBalance(draws,claims,date),quests:E.QUESTS.map(q=>({...q,progress:E.questProgress(q.id,draws,actions,date),claimed:claims.some(c=>c.date===date&&c.id===q.id)})),leaderboard:{date,players,rank,rows:board}};
+  return {source:'server',name:p.name,draws,claims,actions,now,secret:secretState(id),nextDailyAt:last?last.at+E.DAY:0,bonus:E.bonusBalance(draws,claims,date),quests:E.QUESTS.map(q=>({...q,progress:E.questProgress(q.id,draws,actions,date),claimed:claims.some(c=>c.date===date&&c.id===q.id)})),leaderboard:{date,players,rank,rows:board}};
  }
  function draw(id,mode,now=Date.now()){
   if(!['daily','bonus'].includes(mode))fail(400,'Choose a daily or quest roll.');
   return transaction(()=>{
-   const rows=records(id),claims=claimRows(id),last=[...rows].reverse().find(r=>r.mode==='daily');
+   const rows=records(id),claims=claimRows(id),last=[...rows].reverse().find(r=>r.mode==='daily'),boosted=mode==='bonus'&&secretState(id).enabled;
    if(mode==='daily'&&last&&now<last.at+E.DAY)fail(409,'Your daily roll is locked. It cannot be rerolled.');
-   if(mode==='bonus'&&E.bonusBalance(rows,claims,E.dateKey(now))<1)fail(409,'Complete and claim a quest to earn a bonus roll.');
-   const number=pick(),ep=E.classify(number).ep,roll={id:randomUUID(),number,mode,at:now,ep};
-   db.prepare('INSERT INTO rolls VALUES(?,?,?,?,?,?)').run(roll.id,id,number,mode,now,ep);
+   if(mode==='bonus'&&!boosted&&E.bonusBalance(rows,claims,E.dateKey(now))<1)fail(409,'Complete and claim a quest to earn a bonus roll.');
+   const number=boosted?E.INFINITY_NUMBERS[randomInt(E.INFINITY_NUMBERS.length)]:pick(),ep=E.classify(number).ep,roll={id:randomUUID(),number,mode,at:now,ep,boosted};
+   db.prepare('INSERT INTO rolls(id,player,number,mode,at,ep,boosted) VALUES(?,?,?,?,?,?,?)').run(roll.id,id,number,mode,now,ep,Number(boosted));
    return {roll,state:snapshot(id,now)};
   });
  }
@@ -53,6 +63,7 @@ function createStore(filename=':memory:',options={}){
   });
  }
  function rename(id,name){const clean=String(name||'').trim();if(!/^[a-zA-Z0-9 _-]{2,20}$/.test(clean))fail(400,'Use 2–20 letters, numbers, spaces, dashes, or underscores.');db.prepare('UPDATE players SET name=? WHERE id=?').run(clean,id);return snapshot(id);}
- return {player,snapshot,draw,action,claim,rename,close:()=>db.close()};
+ function secret(id,request,now=Date.now()){const next=E.updateSecret(secretState(id),request);db.prepare('INSERT OR REPLACE INTO secrets(player,enabled) VALUES(?,?)').run(id,Number(next.enabled));return snapshot(id,now);}
+ return {player,snapshot,draw,action,claim,rename,secret,close:()=>db.close()};
 }
 module.exports={createStore};

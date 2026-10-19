@@ -33,6 +33,7 @@ function createApp(options={}){
    else if(pathname==='/api/claim')respond(res,200,store.claim(p.id,data.quest));
    else if(pathname==='/api/action')respond(res,200,store.action(p.id,data.action));
    else if(pathname==='/api/profile')respond(res,200,store.rename(p.id,data.name));
+   else if(pathname==='/api/secret')respond(res,200,store.secret(p.id,data));
    else respond(res,404,{error:'Route not found.'});
   }catch(error){respond(res,error.status||500,{error:error.status?error.message:'Something went wrong. Your saved roll is safe.'});if(!error.status)console.error(error);}
  });
